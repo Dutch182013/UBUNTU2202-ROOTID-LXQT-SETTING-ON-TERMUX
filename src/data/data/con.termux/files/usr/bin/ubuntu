@@ -1,0 +1,101 @@
+#!/data/data/com.termux/files/usr/bin/sh
+
+cd $(dirname $0)
+
+WRITE_NAME=".ubuntu-cell-1"
+READ_NAME=".termux-cell-1"
+echo '' > /data/data/com.termux/files/usr/bin/${WRITE_NAME}
+READ=`cat /data/data/com.termux/files/usr/bin/${READ_NAME}`
+
+SET_ONPATH="/data/data/com.termux/files/home"
+SET_FODOR_NAME="/ubuntu22-fs"
+SET_BIN_NAME="/ubuntu22-binds"
+
+SET_PATHBIN=${SET_ONPATH}${SET_BIN_NAME}
+SET_UBUNTU_PATH=${SET_ONPATH}${SET_FODOR_NAME}
+
+## Set-Home-Fodor-Name
+MYHOME_NAME="/root"
+## Set-Defauth-PWD
+MY_PWD_NAME=${MYHOME_NAME}/Desktop
+## Set-Bash-History
+echo 'vncserver-start' > ${SET_UBUNTU_PATH}${MYHOME_NAME}/.bash_history
+
+if [ -n "$(ls -A $SET_PATHBIN)" ]; then
+    for f in ${SET_PATHBIN}/* ;do
+      . $f
+    done
+fi
+
+## Optimai command
+# Android-module font
+OPTIMAI_COMMAND=""
+
+#for i in `ls -A /system/fonts`; do
+#  OPTIMAI_COMMAND="$OPTIMAI_COMMAND -b /system/fonts/$i:/usr/local/share/fonts/$i"
+#done
+
+#for i in /storage/*/0/*; do OPTIMAI_COMMAND="$OPTIMAI_COMMAND -b ${i}"; done
+
+for i in `ls -A /proc/self/fd`; do
+  if [ "$i" = "0" ]; then
+    OPTIMAI_COMMAND="$OPTIMAI_COMMAND -b /proc/self/fd/$i -b /proc/self/fd/$i:/dev/stdin"
+  elif [ "$i" = "1" ]; then
+    OPTIMAI_COMMAND="$OPTIMAI_COMMAND -b /proc/self/fd/$i -b /proc/self/fd/$i:/dev/stdout"
+  elif [ "$i" = "2" ]; then
+    OPTIMAI_COMMAND="$OPTIMAI_COMMAND -b /proc/self/fd/$i -b /proc/self/fd/$i:/dev/stderr"
+  fi
+done
+
+#for i in `ls -A $SET_UBUNTU_PATH/home`; do
+#  OPTIMAI_COMMAND="$OPTIMAI_COMMAND -b $SET_UBUNTU_PATH$MYHOME_NAME:/home/$i"
+#done
+
+## unset LD_PRELOAD in case termux-exec is install
+## unset LD_PRELOAD
+#unset LD_PRELOAD
+command="./proot"
+command="$command --kill-on-exit"
+command="$command --ashmem-memfd"
+command="$command --link2symlink"
+command="$command -0"
+command="$command -r $SET_UBUNTU_PATH"
+## Ad-Android-module
+command="$command -b /dev"
+command="$command -b /proc"
+command="$command -b /sys"
+command="$command -b /data"
+command="$command -b /sdcard"
+command="$command -b /system"
+command="$command -b /storage/*/0"
+## Add-OPTIMI-command
+command="$command $OPTIMAI_COMMAND"
+command="$command -b /dev/urandom:/dev/random"
+## add-defaul-path-chromium
+command="$command -b $SET_UBUNTU_PATH$MYHOME_NAME:/dev/shm"
+## Set-proc-module
+command="$command -b $SET_UBUNTU_PATH/proc/fakethings/stat:/proc/stat"
+command="$command -b $SET_UBUNTU_PATH/proc/fakethings/vmstat:/proc/vmstat"
+command="$command -b $SET_UBUNTU_PATH/proc/fakethings/version:/proc/version"
+## Set-PWD
+command="$command -w $MYHOME_NAME"
+
+## NEW-EVENV
+VENV="/usr/bin/env -i"
+VENV="$VENV MOZ_FAKE_NO_SANDBOX=1"
+VENV="$VENV HOME=$MYHOME_NAME"
+VENV="$VENV PATH=/usr/local/sbin:/usr/local/bin:/bin:/usr/bin:/sbin:/usr/sbin:/usr/games:/usr/local/games"
+VENV="$VENV TERM=xterm-256color"
+VENV="$VENV LANG=C.UTF-8"
+VENV="$VENV BOOTCLASSPATH=$BOOTCLASSPATH"
+VENV="$VENV ANDROID_DATA=SET_UBUNTU_PATH"
+VENV="$VENV ANDROID_ROOT=$SET_UBUNTU_PATH"
+
+com="$@"
+if [ -z "$1" ] && [ "$READ" = "0001" ]; then
+  exec $command $VENV $SET_UBUNTU_PATH/usr/bin/login
+else
+  if [ "$READ" = "0001" ]; then
+    $command $VENV $SET_UBUNTU_PATH/usr/bin/$com
+  fi
+fi
